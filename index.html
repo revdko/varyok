@@ -27,7 +27,7 @@ header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
 h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,6vw,40px);margin:0;letter-spacing:.01em;color:var(--ivory)}
 h1 span{color:var(--brass)}
 .sub{color:var(--muted);font-size:13px}
-button{font-family:var(--body);font-size:14px;font-weight:600;border-radius:8px;border:1px solid var(--felt-line);background:#ffffff10;color:var(--text);padding:9px 14px;cursor:pointer}
+button{touch-action:manipulation;font-family:var(--body);font-size:14px;font-weight:600;border-radius:8px;border:1px solid var(--felt-line);background:#ffffff10;color:var(--text);padding:9px 14px;cursor:pointer}
 button:hover:not(:disabled){background:#ffffff1c}
 button:focus-visible,.card:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 button:disabled{opacity:.4;cursor:default}
@@ -564,7 +564,7 @@ function render(){
     : `<button class="yes" data-act="var" id="b-var">Varım</button>${katlaBtn}<button class="no" data-act="yok" id="b-yok">Yokum</button>`;
   const sel = !!selCard();
   tools = `
-    <div class="hint">Kartları sürükleyip istediğin gibi dizebilirsin. Yan yana duran per kendiliğinden çerçeveye girer.</div>
+    <div class="hint">Desteye ya da yerdeki karta tıklayınca kart çekersin. Elindeki karta çift tıklayınca o kartı atarsın. Kartları sürükleyip istediğin gibi dizebilirsin.</div>
     <button data-act="sort-suit" id="t-suit">Renge göre</button>
     <button data-act="sort-rank" id="t-rank">Sayıya göre</button>
     <button data-act="arrange" id="t-arr">Perlere göre diz</button>
@@ -654,7 +654,13 @@ $app.addEventListener('click', e=>{
   else if(a==='var'||a==='yok'||a==='katla'||a==='normal') userBid(a);
   else if(a==='deck') userDraw(false);
   else if(a==='take') userDraw(true);
-  else if(a==='card'){ const id=+el.dataset.id; G.selected = G.selected===id?null:id; G.msg=''; render(); }
+  else if(a==='card'){
+    const id=+el.dataset.id, now=Date.now();
+    // Çift tıklama / çift dokunma: kartı at
+    if(lastTap.id===id && now-lastTap.t<400 && G.wait==='discard'){ lastTap={}; G.selected=id; userDiscard(); return; }
+    lastTap={id, t:now};
+    G.selected = G.selected===id?null:id; G.msg=''; render();
+  }
   else if(a==='discard') userDiscard();
   else if(a==='open') userOpen();
   else if(a==='sort-suit') sortHand('suit');
@@ -667,7 +673,7 @@ $app.addEventListener('click', e=>{
   else if(a==='menu'){ G=null; render(); }
 });
 // Sürükle-bırak: fare ve dokunmatik ekranda çalışır. Kartı istediğin yere taşı.
-let pd=null, suppressClick=false;
+let pd=null, suppressClick=false, lastTap={};
 function clearDropMarks(){ document.querySelectorAll('.drop-before,.drop-after').forEach(x=>x.classList.remove('drop-before','drop-after')); }
 function dropTarget(x,y){
   const under=document.elementFromPoint(x,y);
