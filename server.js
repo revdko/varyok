@@ -4,7 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
-const Core = require('./public/core.js');
+// Dosyalar public/ klasöründe de olabilir, ana klasörde de.
+const PUB = fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') : __dirname;
+const Core = require(path.join(PUB, 'core.js'));
+const SERVED = new Set(['/index.html', '/core.js', '/tek.html']);
 
 const PORT = process.env.PORT || 10000;
 const START_SCORE = 100, BASE_STAKE = 10, MAX_PLAYERS = 6, MIN_PLAYERS = 3;
@@ -14,14 +17,13 @@ const RL = r => ({1:'A',11:'J',12:'Q',13:'K'}[r] || String(r));
 const cardName = c => RL(c.rank)+SUITS[c.suit];
 
 // ---------- statik dosyalar ----------
-const PUB = path.join(__dirname, 'public');
 const TYPES = {'.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml'};
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent((req.url || '/').split('?')[0]);
   if (p === '/' ) p = '/index.html';
   if (p === '/saglik') { res.writeHead(200); res.end('ok'); return; }
-  const file = path.normalize(path.join(PUB, p));
-  if (!file.startsWith(PUB)) { res.writeHead(403); res.end(); return; }
+  if (!SERVED.has(p)) { res.writeHead(404, {'Content-Type':'text/plain; charset=utf-8'}); res.end('Bulunamadı'); return; }
+  const file = path.join(PUB, p);
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404, {'Content-Type':'text/plain; charset=utf-8'}); res.end('Bulunamadı'); return; }
     res.writeHead(200, {'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control':'no-cache'});
