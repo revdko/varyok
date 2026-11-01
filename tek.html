@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Var Yok</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yeseva+One&family=Figtree:wght@400;600;800&display=swap">
+<style>
+/* Layout: tek ekran kart masası — üstte rakipler, ortada deste/gösterge/yer, altta senin elin ve kontroller. Bilinçli olarak tek tema (yeşil çuha). */
+:root{
+  color-scheme: dark;
+  --felt:#17463a; --felt-deep:#0f3329; --felt-line:#2a6553;
+  --ivory:#f7f1e3; --ink:#1d1f24; --red:#b3262e;
+  --brass:#d9a441; --brass-soft:#d9a44133;
+  --text:#eef3ee; --muted:#a9c4b9;
+  --good:#7fd19b; --bad:#f08a7e;
+  --display:"Yeseva One", Georgia, "Times New Roman", serif;
+  --body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cw:clamp(40px, 8.2vw, 64px);
+}
+html,body{height:100%}
+body{background:radial-gradient(ellipse at 50% 35%, var(--felt) 0%, var(--felt-deep) 85%) fixed, var(--felt-deep);color:var(--text);font-family:var(--body);font-size:15px}
+.wrap{max-width:980px;margin:0 auto;padding-block:14px 28px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:14px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,6vw,40px);margin:0;letter-spacing:.01em;color:var(--ivory)}
+h1 span{color:var(--brass)}
+.sub{color:var(--muted);font-size:13px}
+button{touch-action:manipulation;font-family:var(--body);font-size:14px;font-weight:600;border-radius:8px;border:1px solid var(--felt-line);background:#ffffff10;color:var(--text);padding:9px 14px;cursor:pointer}
+button:hover:not(:disabled){background:#ffffff1c}
+button:focus-visible,.card:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--brass);color:var(--ink);border-color:var(--brass)}
+button.primary:hover:not(:disabled){background:#e8b552}
+button.yes{background:var(--good);color:var(--ink);border-color:var(--good)}
+button.no{background:var(--bad);color:var(--ink);border-color:var(--bad)}
+
+/* setup */
+.setup{display:grid;gap:18px;background:#00000026;border:1px solid var(--felt-line);border-radius:14px;padding:20px}
+.setup h2{font-family:var(--display);font-weight:400;margin:0;font-size:22px}
+.rules{margin:0;padding-left:20px;color:var(--muted);line-height:1.55;max-width:65ch}
+.rules b{color:var(--text)}
+.choice{display:flex;gap:8px;flex-wrap:wrap}
+.choice button[aria-pressed="true"]{background:var(--brass);color:var(--ink);border-color:var(--brass)}
+
+/* opponents */
+.opps{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.opp{border:1px solid var(--felt-line);border-radius:12px;padding:10px 12px;background:#00000022;display:flex;flex-direction:column;gap:6px;transition:box-shadow .2s,border-color .2s}
+.opp.turn{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass-soft)}
+.opp.out{opacity:.5}
+.opp-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.opp-name{font-weight:800}
+.opp-score{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--felt-line);color:var(--muted)}
+.chip.var{color:var(--ink);background:var(--good);border-color:var(--good)}
+.chip.yok{color:var(--ink);background:var(--bad);border-color:var(--bad)}
+.chip.zor{color:var(--ink);background:var(--brass);border-color:var(--brass)}
+.chip.dealer{color:var(--brass);border-color:var(--brass)}
+.backs{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.mini-back{width:18px;height:25px;border-radius:3px;background:repeating-linear-gradient(45deg,#7a1f28 0 4px,#93303a 4px 8px);border:2px solid var(--ivory)}
+
+/* table center */
+.center{display:flex;justify-content:center;align-items:flex-end;gap:clamp(18px,6vw,56px);flex-wrap:wrap;padding:8px 0}
+.pile{display:flex;flex-direction:column;align-items:center;gap:6px}
+.pile .lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800;text-align:center}
+.pile .lbl b{color:var(--brass)}
+.slot{width:calc(var(--cw) * 1.15);aspect-ratio:5/7;border:2px dashed var(--felt-line);border-radius:8px}
+.back{width:calc(var(--cw) * 1.15);aspect-ratio:5/7;border-radius:8px;border:3px solid var(--ivory);background:repeating-linear-gradient(45deg,#7a1f28 0 6px,#93303a 6px 12px);display:grid;place-items:center;color:var(--ivory);font-weight:800;font-variant-numeric:tabular-nums;font-size:15px;text-shadow:0 1px 2px #0008;padding:0}
+.clickable{cursor:pointer;box-shadow:0 0 0 3px var(--brass);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 6px var(--brass-soft)}}
+@media (prefers-reduced-motion: reduce){.clickable{animation:none}}
+
+/* cards */
+.card{width:var(--cw);aspect-ratio:5/7;background:var(--ivory);color:var(--ink);border-radius:7px;position:relative;box-shadow:0 2px 4px #0006;user-select:none;-webkit-user-select:none;border:none;padding:0;font-family:var(--display);flex:none;transition:transform .12s}
+.card.big{width:calc(var(--cw) * 1.15)}
+button.card:disabled{opacity:1;cursor:default}
+button.card:hover:not(:disabled){background:var(--ivory)}
+button.card.okey:hover:not(:disabled),button.card.okey{background:linear-gradient(160deg,#fff6d8,#f2d27a)}
+.card.red{color:var(--red)}
+.card .r{position:absolute;top:3px;left:5px;font-size:calc(var(--cw) * .3);line-height:1}
+.card .s{position:absolute;top:calc(var(--cw) * .33);left:5px;font-size:calc(var(--cw) * .24);line-height:1;font-family:var(--body)}
+.card .pip{position:absolute;right:5px;bottom:2px;font-size:calc(var(--cw) * .5);line-height:1;font-family:var(--body)}
+.card.okey{background:linear-gradient(160deg,#fff6d8,#f2d27a)}
+.card.okey::after{content:"OKEY";position:absolute;bottom:-1px;left:0;right:0;text-align:center;font-family:var(--body);font-size:9px;font-weight:800;letter-spacing:.1em;color:#7a5410}
+.card.okey .pip{display:none}
+.hand .card{cursor:pointer}
+.hand .card.sel{box-shadow:0 0 0 3px var(--brass),0 0 14px 2px var(--brass)}
+.hand .card.fresh{outline:2px dashed var(--brass);outline-offset:2px}
+.hand .card{touch-action:none}
+.hand .card.drop-before{box-shadow:-6px 0 0 0 var(--brass)}
+.hand .card.drop-after{box-shadow:6px 0 0 0 var(--brass)}
+.hint{font-size:12px;color:var(--muted);width:100%}
+
+.me{border-top:1px solid var(--felt-line);padding-top:12px;display:flex;flex-direction:column;gap:12px}
+.me-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.prompt{font-size:16px;font-weight:600;min-height:1.4em}
+.prompt .err{color:var(--bad)}
+.hand{display:flex;flex-wrap:wrap;gap:6px;padding-top:14px;min-height:calc(var(--cw) * 1.4 + 14px)}
+.hand .gap{width:12px;flex:none}
+.pergroup{display:flex;gap:4px;padding:5px;border:2px solid var(--brass);border-radius:11px;background:#d9a4411f;position:relative}
+.pergroup::before{content:"PER";position:absolute;top:-9px;left:8px;background:var(--felt);color:var(--brass);font-size:10px;font-weight:800;letter-spacing:.1em;padding:0 5px;border-radius:4px;line-height:16px}
+.percount{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;align-self:center;margin-right:4px}
+.percount b{color:var(--brass)}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.tools .sp{flex:1}
+.log{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:2px;min-height:3.6em}
+.log div:first-child{color:var(--text)}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:#000a;display:grid;place-items:center;z-index:20;padding:16px}
+.modal{background:var(--felt-deep);border:1px solid var(--brass);border-radius:14px;padding:20px;max-width:640px;width:100%;max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.modal h2{font-family:var(--display);font-weight:400;margin:0;font-size:26px;color:var(--ivory)}
+.melds{display:flex;flex-wrap:wrap;gap:14px}
+.meld{display:flex;gap:3px;padding:6px;border-radius:9px;background:#00000033}
+.meld .card{--cw:clamp(34px,7vw,48px)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+td,th{padding:6px 8px;border-bottom:1px solid var(--felt-line);text-align:left}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+td.num{text-align:right}
+.plus{color:var(--good)} .minus{color:var(--bad)}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+
+<script>
+// ============ SOLVER START ============
+// Kart: {id, suit 0..3 (♠♥♦♣), rank 1..13}. idx = suit*13 + rank-1. Okey kartları "W" (joker).
+function meldOptions(i, counts, w){
+  const suit = Math.floor(i/13), rank = i%13 + 1, out = [];
+  const os = [];
+  for(let s=0;s<4;s++) if(s!==suit && counts[s*13+rank-1]>0) os.push(s*13+rank-1);
+  for(let mask=0; mask<(1<<os.length); mask++){
+    const items = os.filter((_,k)=>(mask>>k)&1);
+    for(let j=0;j<=w;j++){
+      const size = 1+items.length+j;
+      if(size>=3 && size<=4) out.push({kind:'set', items, j, slots:[i,...items,...Array(j).fill('W')]});
+    }
+  }
+  const ps = rank===1 ? [1,14] : [rank];
+  for(const p of ps) for(let L=3; L<=5; L++) for(let s=p-L+1; s<=p; s++){
+    if(s<1 || s+L-1>14) continue;
+    const items=[], slots=[]; let j=0;
+    for(let q=s;q<s+L;q++){
+      if(q===p){ slots.push(i); continue; }
+      const r = q===14 ? 1 : q, idx = suit*13 + r-1;
+      if(counts[idx]>0){ items.push(idx); slots.push(idx); } else { j++; slots.push('W'); }
+    }
+    if(j<=w && j<L-1) out.push({kind:'run', items, j, slots});
+  }
+  return out;
+}
+const memoA = new Map();
+function allMeld(counts, w){
+  const i = counts.findIndex(x=>x>0);
+  if(i<0) return w===0 ? [] : null;
+  const key = counts.join('')+'|'+w;
+  if(memoA.has(key)) return memoA.get(key);
+  counts[i]--;
+  let res = null;
+  for(const o of meldOptions(i,counts,w)){
+    o.items.forEach(x=>counts[x]--);
+    const r = allMeld(counts, w-o.j);
+    o.items.forEach(x=>counts[x]++);
+    if(r){ res = [o.slots, ...r]; break; }
+  }
+  counts[i]++;
+  memoA.set(key,res);
+  return res;
+}
+// Botların el değerlendirmesi: per = kart başı 10, ikili (çift/ardışık) = 3-4, boşta okey = 6
+const memoG = new Map();
+function gSolve(counts, w){
+  const key = counts.join('')+'|'+w;
+  const m = memoG.get(key); if(m) return m;
+  const i = counts.findIndex(x=>x>0);
+  if(i<0){ const b={v:w*6, groups:[]}; memoG.set(key,b); return b; }
+  const suit = Math.floor(i/13), rank = i%13+1;
+  counts[i]--;
+  let r = gSolve(counts,w);
+  let best = {v:r.v, groups:r.groups};
+  for(const o of meldOptions(i,counts,w)){
+    o.items.forEach(x=>counts[x]--);
+    r = gSolve(counts, w-o.j);
+    o.items.forEach(x=>counts[x]++);
+    const v = r.v + 10*o.slots.length;
+    if(v>best.v) best = {v, groups:[{type:'meld', slots:o.slots}, ...r.groups]};
+  }
+  const partners = new Map();
+  for(let s=0;s<4;s++){ const idx=s*13+rank-1; if(s!==suit && counts[idx]>0) partners.set(idx,4); }
+  for(const p of (rank===1?[1,14]:[rank])) for(const d of [1,2]){
+    const q=p+d; if(q>14) continue;
+    const idx = suit*13 + (q===14?1:q) - 1;
+    if(counts[idx]>0 && !partners.has(idx)) partners.set(idx, d===1?4:3);
+  }
+  for(const [idx,val] of partners){
+    counts[idx]--;
+    r = gSolve(counts,w);
+    counts[idx]++;
+    if(r.v+val>best.v) best = {v:r.v+val, groups:[{type:'pair', slots:[i,idx]}, ...r.groups]};
+  }
+  counts[i]++;
+  if(memoG.size>400000) memoG.clear();
+  memoG.set(key,best);
+  return best;
+}
+function toCW(cards, okeySuit){
+  const counts = new Array(52).fill(0); let w=0;
+  for(const c of cards){ if(c.rank===1 && c.suit===okeySuit) w++; else counts[c.suit*13+c.rank-1]++; }
+  return [counts,w];
+}
+function canOpen(cards, okeySuit){ const [c,w]=toCW(cards,okeySuit); return allMeld(c,w); }
+function handValue(cards, okeySuit){ const [c,w]=toCW(cards,okeySuit); return gSolve(c,w); }
+// ============ SOLVER END ============
+
+const SUITS = ['♠','♥','♦','♣'];
+const SUIT_NAMES = ['Maça','Kupa','Karo','Sinek'];
+const RL = r => ({1:'A',11:'J',12:'Q',13:'K'}[r] || String(r));
+const BOT_NAMES = ['Ayşe','Mehmet','Zeynep','Can','Elif'];
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const $app = document.getElementById('app');
+
+let G = null;
+let setupN = 4;
+
+function isWild(c){ return c.rank===1 && c.suit===G.okeySuit; }
+function cardName(c){ return RL(c.rank)+SUITS[c.suit]; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function newGame(n){
+  const players = [{name:'Sen', bot:false, score:START_SCORE}];
+  for(let k=1;k<n;k++) players.push({name:BOT_NAMES[k-1], bot:true, score:START_SCORE});
+  G = {n, players, dealer:Math.floor(Math.random()*n), handNo:0, fast:false, log:[], history:[], stake:BASE_STAKE};
+  newHand();
+}
+const START_SCORE = 100, BASE_STAKE = 10;
+function inPlay(p){ return p.bid!=='yok' && p.bid!=='out'; }
+// Dağıtanın sağından başlayıp elenmemiş oyuncuları sırayla verir (dağıtan en sonda).
+function seatsAfter(d){ const s=[]; for(let k=1;k<=G.n;k++){ const i=(d+k)%G.n; if(!G.players[i].out) s.push(i); } return s; }
+function nextSeat(d){ return seatsAfter(d)[0]; }
+
+function log(msg){ G.log.unshift(msg); G.log = G.log.slice(0,4); }
+
+function newHand(carryMsg){
+  G.handNo++;
+  memoA.clear(); memoG.clear();
+  const deck=[]; let id=0;
+  for(let d=0;d<2;d++) for(let s=0;s<4;s++) for(let r=1;r<=13;r++) deck.push({id:id++, suit:s, rank:r});
+  shuffle(deck);
+  G.players.forEach(p=>{ p.hand=[]; p.bid = p.out ? 'out' : null; p.katla=false; });
+  G.stake = BASE_STAKE;
+  const seats = seatsAfter(G.dealer);
+  for(let round=0; round<5; round++)
+    for(const i of seats) G.players[i].hand.push(deck.pop(), deck.pop());
+  G.deck = deck;
+  G.indicator = deck.pop();
+  G.okeySuit = G.indicator.suit;
+  G.discard = [];
+  G.forced = seats[0];
+  G.players[G.forced].bid = 'zorunlu';
+  // Zorunlu oyuncu da sırası gelince katlayabilir; diğerleri Varım / Katla / Yokum der.
+  G.bidders = seats;
+  G.bidPos = 0; G.phase = 'bid'; G.wait = null; G.turn = null;
+  G.selected = null; G.fresh = null; G.gaps = new Set(); G.msg = ''; G.result = null;
+  sortHand('suit', false);
+  G.log = [];
+  if(carryMsg) log(carryMsg);
+  log(`${G.handNo}. el (${G.stake} puanlık): ${G.players[G.dealer].name} dağıttı. Gösterge ${cardName(G.indicator)}, okey ${'A'+SUITS[G.okeySuit]}.`);
+  render();
+  loop();
+}
+
+function delay(){ const meIn = inPlay(G.players[0]); return G.fast ? 120 : (meIn ? 800 : 420); }
+
+async function loop(){
+  // Tek akış: ihale, sonra sıra sırayla oyun. Kullanıcı hamlesi gerektiğinde durur.
+  while(true){
+    if(G.phase==='bid'){
+      if(G.bidPos>=G.bidders.length){ startPlay(); render(); continue; }
+      const p = G.bidders[G.bidPos];
+      if(p===0){ G.wait='bid'; render(); return; }
+      await sleep(delay());
+      const pl = G.players[p];
+      const v = handValue(pl.hand, G.okeySuit).v;
+      const strong = v >= pl.thresh + 10;
+      if(p===G.forced){
+        if(strong) doKatla(pl); else log(`${pl.name}: zorunlu oynuyor, katlamadı.`);
+      } else {
+        pl.bid = (v>=pl.thresh || Math.random()<0.08) ? 'var' : 'yok';
+        if(pl.bid==='var' && strong) doKatla(pl);
+        else log(`${pl.name}: ${pl.bid==='var'?'Varım':'Yokum'}`);
+      }
+      G.bidPos++; render();
+    } else if(G.phase==='play'){
+      if(G.deck.length===0){
+        // Deste bitti, kimse açamadı: el kapanır, puan değişmez, sağdaki yeni eli dağıtır.
+        G.phase='end'; G.wait=null;
+        log('Deste bitti, kimse açamadı. El kapandı, yeni el dağıtılıyor.');
+        G.history.push({hand:G.handNo, winner:null});
+        render();
+        setTimeout(()=>{ G.dealer = nextSeat(G.dealer); newHand('Önceki elde deste bitti, kimse açamadı.'); }, G.fast ? 700 : 2000);
+        return;
+      }
+      const p = G.turn;
+      if(p===0){ G.wait='draw'; render(); return; }
+      await sleep(delay());
+      const won = botTurn(p);
+      if(won){ endHand(p); return; }
+      nextTurn(); render();
+    } else return;
+  }
+}
+
+function startPlay(){
+  const active = G.players.filter(inPlay);
+  if(active.length<2){
+    // Herkes yokum: el biter, sağdaki oyuncu yeniden dağıtır.
+    G.phase='end';
+    log(`Herkes yokum dedi. El bitti, yeni el dağıtılıyor.`);
+    G.history.push({hand:G.handNo, winner:null});
+    render();
+    const msg = `Önceki elde herkes yokum dedi.`;
+    setTimeout(()=>{ G.dealer = nextSeat(G.dealer); newHand(msg); }, G.fast ? 700 : 2000);
+    return;
+  }
+  G.phase='play'; G.turn=G.forced;
+  log(`${G.players[G.forced].name} başlıyor. Oyunda ${active.length} kişi var.`);
+}
+
+function nextTurn(){
+  let t=G.turn;
+  do { t=(t+1)%G.n; } while(!inPlay(G.players[t]));
+  G.turn=t;
+}
+
+function botTurn(p){
+  const pl = G.players[p], os = G.okeySuit;
+  const top = G.discard[G.discard.length-1];
+  const bestDiscard = (h)=>{
+    let best=null;
+    for(const c of h){
+      if(isWild(c)) continue;
+      const rest = h.filter(x=>x!==c);
+      if(canOpen(rest,os)) return {c, win:true, v:1e9};
+      const v = handValue(rest,os).v + Math.random()*0.5;
+      if(!best || v>best.v) best={c,v,win:false};
+    }
+    return best || {c:h[0], v:0, win:false};
+  };
+  let took = false;
+  if(top){
+    const withTop = [...pl.hand, top];
+    const b = bestDiscard(withTop);
+    const v0 = handValue(pl.hand,os).v;
+    if(b.win || (b.c!==top && b.v > v0+5)){ took=true; }
+  }
+  let drawn;
+  if(took){ drawn=G.discard.pop(); log(`${pl.name} yerden ${cardName(drawn)} aldı.`); }
+  else { drawn=G.deck.pop(); }
+  pl.hand.push(drawn);
+  const b = bestDiscard(pl.hand);
+  pl.hand = pl.hand.filter(x=>x!==b.c);
+  G.discard.push(b.c);
+  if(b.win){ log(`${pl.name} ${cardName(b.c)} atıp açtı!`); return true; }
+  log(`${pl.name} ${took?'':'desteden çekti, '}${cardName(b.c)} attı.`);
+  return false;
+}
+
+function endHand(winner){
+  G.phase='end'; G.wait=null;
+  const res = {winner, deltas:{}};
+  if(winner===null){
+    log('Deste bitti, kimse açamadı.');
+    res.empty = true;
+  } else {
+    const s = G.stake;
+    res.stake = s;
+    const others = G.players.map((p,i)=>i).filter(i=>i!==winner && inPlay(G.players[i]));
+    others.forEach(i=>{ G.players[i].score -= s; res.deltas[i]=-s; });
+    G.players[winner].score += s*others.length; res.deltas[winner]=s*others.length;
+    res.melds = canOpen(G.players[winner].hand, G.okeySuit);
+    res.cards = G.players[winner].hand;
+    G.stake = BASE_STAKE;
+    res.eliminated = [];
+    G.players.forEach((p,i)=>{ if(!p.out && p.score<=0){ p.out=true; res.eliminated.push(i); log(`${p.name} puanı bitti, oyundan elendi.`); } });
+  }
+  const alive = G.players.filter(p=>!p.out);
+  if(G.players[0].out) res.gameOver = 'Puanın bitti, oyundan elendin.';
+  else if(alive.length===1) res.gameOver = 'Herkes elendi, oyunu sen kazandın!';
+  G.history.push({hand:G.handNo, winner});
+  G.result = res;
+  render();
+}
+
+// ---- kullanıcı eylemleri ----
+function doKatla(pl){
+  G.stake *= 2; pl.katla = true;
+  if(pl.bid!=='zorunlu') pl.bid='var';
+  log(`${pl.name}: Katladım! El artık ${G.stake} puan.`);
+}
+function userBid(choice){
+  if(G.wait!=='bid') return;
+  const me=G.players[0];
+  if(choice==='katla') doKatla(me);
+  else if(choice==='normal') log('Sen: katlamadan oynuyorsun.');
+  else { me.bid = choice; log(`Sen: ${choice==='var'?'Varım':'Yokum'}`); }
+  G.wait=null; G.bidPos++; render(); loop();
+}
+function userDraw(fromDiscard){
+  if(G.wait!=='draw') return;
+  let c;
+  if(fromDiscard){ if(!G.discard.length) return; c=G.discard.pop(); log(`Sen yerden ${cardName(c)} aldın.`); }
+  else { c=G.deck.pop(); }
+  G.players[0].hand.push(c); G.fresh=c.id; G.selected=null; G.msg='';
+  G.wait='discard'; render();
+}
+function selCard(){ return G.players[0].hand.find(c=>c.id===G.selected); }
+function userDiscard(){
+  if(G.wait!=='discard') return;
+  const c = selCard(); if(!c){ G.msg='<span class="err">Önce atacağın kartı seç.</span>'; render(); return; }
+  const me=G.players[0];
+  me.hand = me.hand.filter(x=>x!==c); G.discard.push(c);
+  log(`Sen ${cardName(c)} attın.`);
+  G.selected=null; G.fresh=null; G.wait=null; G.msg='';
+  nextTurn(); render(); loop();
+}
+function userOpen(){
+  if(G.wait!=='discard') return;
+  const c = selCard(); if(!c){ G.msg='<span class="err">Açmak için önce son atacağın kartı seç.</span>'; render(); return; }
+  const rest = G.players[0].hand.filter(x=>x!==c);
+  if(!canOpen(rest, G.okeySuit)){ G.msg=`<span class="err">${cardName(c)} atınca kalan 10 kart tam per olmuyor.</span>`; render(); return; }
+  G.players[0].hand = rest; G.discard.push(c);
+  log(`Sen ${cardName(c)} atıp açtın!`);
+  endHand(0);
+}
+function sortHand(by, doRender=true){
+  const h=G.players[0].hand;
+  const wk = c => isWild(c) ? 1 : 0;
+  if(by==='suit') h.sort((a,b)=>wk(a)-wk(b) || a.suit-b.suit || a.rank-b.rank);
+  else h.sort((a,b)=>wk(a)-wk(b) || a.rank-b.rank || a.suit-b.suit);
+  G.gaps=new Set();
+  if(doRender) render();
+}
+function arrangeMelds(){
+  const me=G.players[0];
+  const best = handValue(me.hand, G.okeySuit);
+  const pool=[...me.hand], out=[], gaps=new Set();
+  const take = s => {
+    const k = pool.findIndex(c => s==='W' ? isWild(c) : (!isWild(c) && c.suit*13+c.rank-1===s));
+    return k>=0 ? pool.splice(k,1)[0] : null;
+  };
+  for(const g of best.groups){
+    const cs = g.slots.map(take).filter(Boolean);
+    if(!cs.length) continue;
+    out.push(...cs); gaps.add(cs[cs.length-1].id);
+  }
+  pool.sort((a,b)=>(isWild(a)-isWild(b)) || a.suit-b.suit || a.rank-b.rank);
+  out.push(...pool);
+  me.hand=out; G.gaps=gaps; render();
+}
+// Elde yan yana duran kartlar geçerli bir per mi? (sıralı seri ya da aynı sayı)
+function isPer(cards){
+  if(cards.length<3) return false;
+  const nat = cards.filter(c=>!isWild(c));
+  if(nat.length===0) return false;
+  if(cards.length<=4 && nat.every(c=>c.rank===nat[0].rank) && new Set(nat.map(c=>c.suit)).size===nat.length) return true;
+  if(!nat.every(c=>c.suit===nat[0].suit)) return false;
+  const fits = seq => {
+    for(let s=1; s+seq.length-1<=14; s++){
+      if(seq.every((c,k)=> isWild(c) || c.rank===((s+k)===14?1:s+k))) return true;
+    }
+    return false;
+  };
+  return fits(cards) || fits([...cards].reverse());
+}
+function findPerSegments(hand){
+  const segs=[]; let loose=[]; let i=0;
+  while(i<hand.length){
+    let end=-1;
+    for(let j=hand.length; j>=i+3; j--){ if(isPer(hand.slice(i,j))){ end=j; break; } }
+    if(end>0){
+      if(loose.length){ segs.push({per:false, cards:loose}); loose=[]; }
+      segs.push({per:true, cards:hand.slice(i,end)}); i=end;
+    } else { loose.push(hand[i]); i++; }
+  }
+  if(loose.length) segs.push({per:false, cards:loose});
+  return segs;
+}
+function moveSel(d){
+  const h=G.players[0].hand, k=h.findIndex(c=>c.id===G.selected);
+  if(k<0) return; const t=k+d; if(t<0||t>=h.length) return;
+  [h[k],h[t]]=[h[t],h[k]]; G.gaps=new Set(); render();
+}
+
+// ---- çizim ----
+function cardHTML(c, extra='', attrs=''){
+  const red = c.suit===1||c.suit===2;
+  const ok = G && isWild(c);
+  return `<button class="card ${red?'red':''} ${ok?'okey':''} ${extra}" ${attrs} aria-label="${SUIT_NAMES[c.suit]} ${RL(c.rank)}${ok?' (okey)':''}"><span class="r">${RL(c.rank)}</span><span class="s">${SUITS[c.suit]}</span><span class="pip">${SUITS[c.suit]}</span></button>`;
+}
+function bidChip(p){
+  if(p.bid==='var') return '<span class="chip var">Varım</span>';
+  if(p.bid==='yok') return '<span class="chip yok">Yokum</span>';
+  if(p.bid==='zorunlu') return '<span class="chip zor">Zorunlu</span>';
+  if(p.bid==='out') return '<span class="chip">Elendi</span>';
+  if(p.katla) return (p.bid==='zorunlu'?'<span class="chip zor">Zorunlu</span>':'<span class="chip var">Varım</span>')+'<span class="chip dealer">Katladı</span>';
+  return '<span class="chip">Düşünüyor</span>';
+}
+
+function renderSetup(){
+  $app.innerHTML = `
+  <header><h1>Var <span>Yok</span></h1><div class="sub">104 kartlık iki deste · 3–6 oyuncu</div></header>
+  <section class="setup">
+    <h2>Nasıl oynanır</h2>
+    <ul class="rules">
+      <li>Herkese ikişer ikişer, beş seferde <b>10 kart</b> dağıtılır. Yerde bir <b>gösterge</b> kartı açılır; göstergenin renginin <b>ası okeydir</b> ve her kartın yerine geçer.</li>
+      <li>Dağıtanın sağındaki oyuncu ihaleye girmez, <b>zorunlu oynar</b> ve oyuna o başlar. Diğerleri <b>Varım</b> ya da <b>Yokum</b> der. Yokum diyen o eli pas geçer.</li>
+      <li>Sırası gelen desteden çeker ya da yere atılan son kartı alır, sonra bir kart atar.</li>
+      <li><b>Per</b>: aynı renkte en az 3 ardışık kart (A-2-3 ya da Q-K-A olur) veya aynı sayıda farklı renklerden 3–4 kart.</li>
+      <li>Elindeki 10 kartın hepsini pere dizip son kartını atan <b>açar ve eli kazanır</b>. Elde boş kart kalmaz.</li>
+      <li>Herkes <b>100 puanla</b> başlar. El <b>10 puanlıktır</b>: açan, oyundaki diğer her oyuncudan el değeri kadar puan alır. Yokum diyenin puanı değişmez.</li>
+      <li>İhalede <b>Katla</b> diyen oyuna girer ve eli ikiye katlar: 10 → 20 → 40… Her katlama bir kez daha ikiye katlar. Zorunlu oyuncu da katlayabilir.</li>
+      <li>Herkes yokum derse ya da deste biter ve kimse açamazsa el kapanır, puanlar değişmez, dağıtanın sağındaki yeni eli dağıtır.</li>
+      <li>Puanı <b>sıfıra ya da eksiye düşen hemen elenir</b>. Masada son kalan oyunu kazanır.</li>
+    </ul>
+    <div><div class="sub" style="margin-bottom:6px">Masada kaç kişi olsun? (sen + bilgisayar)</div>
+      <div class="choice">${[3,4,5,6].map(n=>`<button data-act="n" data-n="${n}" aria-pressed="${n===setupN}">${n} kişi</button>`).join('')}</div>
+    </div>
+    <div><button class="primary" data-act="start" id="start">Masaya otur</button></div>
+  </section>`;
+}
+
+function render(){
+  if(!G){ renderSetup(); return; }
+  const me=G.players[0];
+  const opps = G.players.slice(1).map((p,k)=>{
+    const i=k+1;
+    return `<div class="opp ${G.turn===i&&G.phase==='play'?'turn':''} ${inPlay(p)?'':'out'}">
+      <div class="opp-top"><span class="opp-name">${p.name}</span><span class="opp-score">${p.score} puan</span></div>
+      <div class="chips">${G.dealer===i?'<span class="chip dealer">Dağıtan</span>':''}${bidChip(p)}</div>
+      <div class="backs"><span class="mini-back"></span>${p.hand.length} kart</div>
+    </div>`;
+  }).join('');
+  const top=G.discard[G.discard.length-1];
+  const canDraw = G.wait==='draw';
+  let prompt='', tools='';
+  if(G.wait==='bid') prompt = me.bid==='zorunlu'
+    ? `Dağıtanın sağındasın, zorunlu oynuyorsun. Eli katlamak ister misin? (${G.stake} → ${G.stake*2} puan)`
+    : `Kartlarına bak. Bu elde var mısın? Katlarsan el ${G.stake} yerine ${G.stake*2} puan olur.`;
+  else if(G.wait==='draw') prompt = `Sıra sende: desteden çek ya da yerdeki kartı al.`;
+  else if(G.wait==='discard') prompt = `Atacağın kartı seç ve <b>At</b>'a bas. Kalan 10 kart tam per oluyorsa <b>Aç</b>.`;
+  else if(me.out) prompt = `Oyundan elendin.`;
+  else if(G.phase==='end') prompt = `El bitti.`;
+  else if(G.phase==='play') prompt = me.bid==='yok' ? `Bu eli pas geçtin. ${G.players[G.turn].name} oynuyor…` : `${G.players[G.turn].name} oynuyor…`;
+  else if(G.phase==='bid') prompt = me.bid==='zorunlu' ? `Zorunlu oynuyorsun. Diğerleri ihaleye giriyor…` : `İhale sürüyor…`;
+  if(G.msg) prompt += `<br>${G.msg}`;
+
+  const katlaBtn = `<button class="primary" data-act="katla" id="b-katla">Katla ×2</button>`;
+  const bidBtns = G.wait!=='bid' ? '' : me.bid==='zorunlu'
+    ? `${katlaBtn}<button class="yes" data-act="normal" id="b-normal">Katlamadan oyna</button>`
+    : `<button class="yes" data-act="var" id="b-var">Varım</button>${katlaBtn}<button class="no" data-act="yok" id="b-yok">Yokum</button>`;
+  const sel = !!selCard();
+  tools = `
+    <div class="hint">Desteye ya da yerdeki karta tıklayınca kart çekersin. Elindeki karta çift tıklayınca o kartı atarsın. Kartları sürükleyip istediğin gibi dizebilirsin.</div>
+    <button data-act="sort-suit" id="t-suit">Renge göre</button>
+    <button data-act="sort-rank" id="t-rank">Sayıya göre</button>
+    <button data-act="arrange" id="t-arr">Perlere göre diz</button>
+    <button data-act="left" id="t-l" ${sel?'':'disabled'} aria-label="Seçili kartı sola taşı">◀</button>
+    <button data-act="right" id="t-r" ${sel?'':'disabled'} aria-label="Seçili kartı sağa taşı">▶</button>
+    <span class="sp"></span>
+    ${bidBtns}
+    ${G.wait==='discard' ? `<button data-act="discard" id="t-at" ${sel?'':'disabled'}>At</button><button class="primary" data-act="open" id="t-open" ${sel?'':'disabled'}>Aç</button>`:''}
+  `;
+  const one = c => {
+    const cls = `${G.selected===c.id?'sel':''} ${G.fresh===c.id?'fresh':''}`;
+    return cardHTML(c, cls, `data-act="card" data-id="${c.id}"`);
+  };
+  const segs = findPerSegments(me.hand);
+  let handHTML = '', inPer = 0;
+  for(const seg of segs){
+    if(seg.per){ inPer += seg.cards.length; handHTML += `<span class="pergroup" title="Per">${seg.cards.map(one).join('')}</span>`; }
+    else handHTML += seg.cards.map(c => one(c) + (G.gaps.has(c.id)?'<span class="gap"></span>':'')).join('');
+  }
+  const perCount = `<span class="percount">Perdeki kart: <b>${inPer}</b> / ${me.hand.length}</span>`;
+
+  $app.innerHTML = `
+  <header><h1>Var <span>Yok</span></h1>
+    <div class="sub">${G.handNo}. el · El değeri: <b class="stake">${G.stake}</b>${G.stake>BASE_STAKE?` (katlamalı ×${G.stake/BASE_STAKE})`:''} · Puanın: <b>${me.score}</b> ${G.dealer===0?'· Dağıtan sensin':''}
+      · <button data-act="fast" id="t-fast" style="padding:3px 9px;font-size:12px" aria-pressed="${G.fast}">${G.fast?'Hızlı: açık':'Hızlı: kapalı'}</button></div>
+  </header>
+  <section class="opps">${opps}</section>
+  <section class="center">
+    <div class="pile">
+      ${G.deck.length ? `<button class="back ${canDraw?'clickable':''}" data-act="deck" id="p-deck" ${canDraw?'':'disabled'} aria-label="Desteden çek">${G.deck.length}</button>` : '<div class="slot"></div>'}
+      <div class="lbl">Deste</div>
+    </div>
+    <div class="pile">
+      ${cardHTML(G.indicator,'big','tabindex="-1" disabled')}
+      <div class="lbl">Gösterge<br>Okey: <b>A${SUITS[G.okeySuit]}</b></div>
+    </div>
+    <div class="pile">
+      ${top ? cardHTML(top, `big ${canDraw?'clickable':''}`, `data-act="take" id="p-take" ${canDraw?'':'disabled'}`) : '<div class="slot"></div>'}
+      <div class="lbl">Yer</div>
+    </div>
+  </section>
+  <section class="me">
+    <div class="me-top">
+      <div class="prompt">${prompt}</div>
+      <div class="chips">${perCount}${G.dealer===0?'<span class="chip dealer">Dağıtan</span>':''}${bidChip(me)}</div>
+    </div>
+    <div class="hand" id="hand">${handHTML}</div>
+    <div class="tools">${tools}</div>
+    <div class="log">${G.log.map(l=>`<div>${l}</div>`).join('')}</div>
+  </section>
+  ${G.result ? resultHTML() : ''}`;
+}
+
+function resultHTML(){
+  const r=G.result;
+  let title, body='';
+  if(r.empty){ title='Deste bitti'; body='<p>Kimse açamadı. Puanlar değişmedi.</p>'; }
+  else {
+    const w=G.players[r.winner];
+    title = r.winner===0 ? 'Açtın, el senin!' : `${w.name} açtı`;
+    title += ` · ${r.stake} puanlık el`;
+    const pool=[...r.cards];
+    const take = s => { const k=pool.findIndex(c => s==='W'?isWild(c):(!isWild(c)&&c.suit*13+c.rank-1===s)); return k>=0?pool.splice(k,1)[0]:null; };
+    body = `<div class="melds">${(r.melds||[]).map(m=>`<div class="meld">${m.map(take).filter(Boolean).map(c=>cardHTML(c,'','tabindex="-1"')).join('')}</div>`).join('')}</div>`;
+  }
+  const rows = G.players.map((p,i)=>{
+    const d=r.deltas&&r.deltas[i]!==undefined ? r.deltas[i] : 0;
+    const elim = (r.eliminated||[]).includes(i);
+    const bidTxt = p.bid==='out' ? 'Elenmişti' : p.bid==='yok'?'Yokum':p.bid==='zorunlu'?'Zorunlu':'Varım';
+    return `<tr><td>${p.name}${elim?' <span class="chip yok">Elendi</span>':''}</td><td>${bidTxt}</td><td class="num ${d>0?'plus':d<0?'minus':''}">${d>0?'+':''}${d}</td><td class="num"><b>${p.score}</b></td></tr>`;
+  }).join('');
+  return `<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true" aria-label="${title}">
+    <h2>${title}</h2>${body}
+    ${r.gameOver?`<p class="prompt">${r.gameOver}</p>`:''}
+    <table><thead><tr><th>Oyuncu</th><th>İhale</th><th style="text-align:right">Bu el</th><th style="text-align:right">Toplam</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="tools">${r.gameOver?'':'<button class="primary" data-act="next" id="m-next">Sonraki el</button>'}<button data-act="menu" id="m-menu" ${r.gameOver?'class="primary"':''}>Yeni oyun</button></div>
+  </div></div>`;
+}
+
+// ---- olaylar ----
+$app.addEventListener('click', e=>{
+  if(suppressClick) return;
+  const el = e.target.closest('[data-act]'); if(!el || el.disabled) return;
+  const a = el.dataset.act;
+  if(a==='n'){ setupN=+el.dataset.n; render(); }
+  else if(a==='start'){ newGame(setupN); G.players.forEach(p=>p.thresh = 26 + Math.floor(Math.random()*10)); }
+  else if(a==='var'||a==='yok'||a==='katla'||a==='normal') userBid(a);
+  else if(a==='deck') userDraw(false);
+  else if(a==='take') userDraw(true);
+  else if(a==='card'){
+    const id=+el.dataset.id, now=Date.now();
+    // Çift tıklama / çift dokunma: kartı at
+    if(lastTap.id===id && now-lastTap.t<550 && G.wait==='discard'){ lastTap={}; G.selected=id; userDiscard(); return; }
+    lastTap={id, t:now};
+    G.selected = G.selected===id?null:id; G.msg=''; render();
+  }
+  else if(a==='discard') userDiscard();
+  else if(a==='open') userOpen();
+  else if(a==='sort-suit') sortHand('suit');
+  else if(a==='sort-rank') sortHand('rank');
+  else if(a==='arrange') arrangeMelds();
+  else if(a==='left') moveSel(-1);
+  else if(a==='right') moveSel(1);
+  else if(a==='fast'){ G.fast=!G.fast; render(); }
+  else if(a==='next'){ G.dealer=nextSeat(G.dealer); newHand(); }
+  else if(a==='menu'){ G=null; render(); }
+});
+// Sürükle-bırak: fare ve dokunmatik ekranda çalışır. Kartı istediğin yere taşı.
+let pd=null, suppressClick=false, lastTap={};
+function clearDropMarks(){ document.querySelectorAll('.drop-before,.drop-after').forEach(x=>x.classList.remove('drop-before','drop-after')); }
+function dropTarget(x,y){
+  const under=document.elementFromPoint(x,y);
+  const t=under && under.closest('.hand [data-act="card"]');
+  if(t && (!pd || t!==pd.el)){ const r=t.getBoundingClientRect(); return {id:+t.dataset.id, el:t, after:x>r.left+r.width/2}; }
+  const hand=document.getElementById('hand');
+  if(hand){ const r=hand.getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top-20&&y<=r.bottom+20) return {end:true}; }
+  return null;
+}
+$app.addEventListener('pointerdown', e=>{
+  const el=e.target.closest('.hand [data-act="card"]'); if(!el || e.button>0) return;
+  pd={id:+el.dataset.id, x:e.clientX, y:e.clientY, el, dragging:false};
+});
+window.addEventListener('pointermove', e=>{
+  if(!pd) return;
+  if(!pd.dragging){
+    if(Math.hypot(e.clientX-pd.x, e.clientY-pd.y)<8) return;
+    pd.dragging=true;
+    const r=pd.el.getBoundingClientRect();
+    const g=pd.el.cloneNode(true);
+    g.classList.remove('sel','fresh');
+    Object.assign(g.style,{position:'fixed',left:r.left+'px',top:r.top+'px',width:r.width+'px',margin:0,zIndex:30,pointerEvents:'none',transform:'rotate(-4deg)',boxShadow:'0 10px 20px #0009'});
+    document.body.appendChild(g);
+    pd.ghost=g; pd.dx=pd.x-r.left; pd.dy=pd.y-r.top; pd.el.style.opacity='.3';
+  }
+  e.preventDefault();
+  pd.ghost.style.left=(e.clientX-pd.dx)+'px'; pd.ghost.style.top=(e.clientY-pd.dy)+'px';
+  clearDropMarks();
+  const t=dropTarget(e.clientX,e.clientY);
+  if(t && t.el) t.el.classList.add(t.after?'drop-after':'drop-before');
+}, {passive:false});
+function endDrag(e, cancel){
+  if(!pd) return; const d=pd; pd=null;
+  if(!d.dragging) return;
+  d.ghost.remove(); clearDropMarks();
+  suppressClick=true; setTimeout(()=>suppressClick=false,0);
+  const t = cancel ? null : dropTarget(e.clientX,e.clientY);
+  if(t){
+    const h=G.players[0].hand, from=h.findIndex(c=>c.id===d.id);
+    const [c]=h.splice(from,1);
+    if(t.end) h.push(c);
+    else { let to=h.findIndex(x=>x.id===t.id); if(t.after) to++; h.splice(to,0,c); }
+    G.gaps=new Set();
+  }
+  render();
+}
+window.addEventListener('pointerup', e=>endDrag(e,false));
+$app.addEventListener('dblclick', e=>{
+  const el=e.target.closest('.hand [data-act="card"]');
+  if(!el || !G || G.wait!=='discard') return;
+  e.preventDefault(); G.selected=+el.dataset.id; userDiscard();
+});
+window.addEventListener('pointercancel', e=>endDrag(e,true));
+
+render();
+</script>
+</body>
+</html>
