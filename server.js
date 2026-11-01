@@ -7,7 +7,7 @@ const { WebSocketServer } = require('ws');
 // Dosyalar public/ klasöründe de olabilir, ana klasörde de.
 const PUB = fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') : __dirname;
 const Core = require(path.join(PUB, 'core.js'));
-const SERVED = new Set(['/index.html', '/core.js', '/tek.html']);
+const SERVED = new Set(['/index.html', '/core.js', '/tek.html', '/sw.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']);
 
 const PORT = process.env.PORT || 10000;
 const START_SCORE = 100, BASE_STAKE = 10, MAX_PLAYERS = 6, MIN_PLAYERS = 3;
@@ -17,7 +17,7 @@ const RL = r => ({1:'A',11:'J',12:'Q',13:'K'}[r] || String(r));
 const cardName = c => RL(c.rank)+SUITS[c.suit];
 
 // ---------- statik dosyalar ----------
-const TYPES = {'.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml'};
+const TYPES = {'.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.png':'image/png', '.webmanifest':'application/manifest+json; charset=utf-8'};
 const server = http.createServer((req, res) => {
   let p = decodeURIComponent((req.url || '/').split('?')[0]);
   if (p === '/' ) p = '/index.html';
