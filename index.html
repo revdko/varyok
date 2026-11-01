@@ -86,7 +86,7 @@ button.card.okey:hover:not(:disabled),button.card.okey{background:linear-gradien
 .card.okey::after{content:"OKEY";position:absolute;bottom:-1px;left:0;right:0;text-align:center;font-family:var(--body);font-size:9px;font-weight:800;letter-spacing:.1em;color:#7a5410}
 .card.okey .pip{display:none}
 .hand .card{cursor:pointer}
-.hand .card.sel{transform:translateY(-12px);box-shadow:0 0 0 3px var(--brass),0 6px 10px #0007}
+.hand .card.sel{box-shadow:0 0 0 3px var(--brass),0 0 14px 2px var(--brass)}
 .hand .card.fresh{outline:2px dashed var(--brass);outline-offset:2px}
 .hand .card{touch-action:none}
 .hand .card.drop-before{box-shadow:-6px 0 0 0 var(--brass)}
@@ -657,7 +657,7 @@ $app.addEventListener('click', e=>{
   else if(a==='card'){
     const id=+el.dataset.id, now=Date.now();
     // Çift tıklama / çift dokunma: kartı at
-    if(lastTap.id===id && now-lastTap.t<400 && G.wait==='discard'){ lastTap={}; G.selected=id; userDiscard(); return; }
+    if(lastTap.id===id && now-lastTap.t<550 && G.wait==='discard'){ lastTap={}; G.selected=id; userDiscard(); return; }
     lastTap={id, t:now};
     G.selected = G.selected===id?null:id; G.msg=''; render();
   }
@@ -721,6 +721,11 @@ function endDrag(e, cancel){
   render();
 }
 window.addEventListener('pointerup', e=>endDrag(e,false));
+$app.addEventListener('dblclick', e=>{
+  const el=e.target.closest('.hand [data-act="card"]');
+  if(!el || !G || G.wait!=='discard') return;
+  e.preventDefault(); G.selected=+el.dataset.id; userDiscard();
+});
 window.addEventListener('pointercancel', e=>endDrag(e,true));
 
 render();
