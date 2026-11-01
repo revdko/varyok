@@ -97,6 +97,8 @@ class Room {
   // Oyunu bir sonraki karar noktasına kadar ilerletir. İnsan oyuncuyu bekler, botları zamanlayarak oynatır.
   advance(){
     this.broadcast();
+    // Masada bağlı kimse kalmadıysa oyunu duraklat (biri dönünce devam eder)
+    if(!this.players.some(p=>!p.bot && p.connected)) { clearTimeout(this.timer); return; }
     if(this.phase==='bid'){
       if(this.bidPos>=this.bidders.length){ this.startPlay(); return; }
       const p = this.players[this.bidders[this.bidPos]];
@@ -211,6 +213,13 @@ class Room {
     const i=this.players.indexOf(p);
     const err = msg => p.ws && send(p.ws, {t:'error', msg});
     switch(m.t){
+      case 'leave': {
+        if(p.ws) p.ws.room=null;
+        p.ws=null; p.connected=false; p.left=true;
+        if(this.phase==='lobby'){ this.players.splice(i,1); this.addLog(`${p.name} masadan kalktı.`); this.broadcast(); }
+        else { this.addLog(`${p.name} masadan kalktı, yerine bilgisayar oynuyor.`); if(this.phase==='bid'||this.phase==='play') this.advance(); else this.broadcast(); }
+        return;
+      }
       case 'addBot':
         if(this.phase!=='lobby' || p!==this.host) return;
         if(this.players.length>=MAX_PLAYERS) return err('Masa dolu (en fazla 6 kişi).');
@@ -306,7 +315,7 @@ wss.on('connection', ws => {
         room=rooms.get(String(m.code||'').toUpperCase().trim());
         if(!room) return send(ws, {t:'error', msg:'Bu kodla bir oda bulunamadı. Kodu kontrol et.', fatal:true});
       }
-      let p = m.token && room.players.find(x=>x.token===m.token && !x.bot);
+      let p = m.token && room.players.find(x=>x.token===m.token && !x.bot && !x.left);
       if(!p){
         if(room.phase!=='lobby') return send(ws, {t:'error', msg:'Bu masada oyun başladı. Yeni oyuncu katılamaz.', fatal:true});
         if(room.players.length>=MAX_PLAYERS) return send(ws, {t:'error', msg:'Masa dolu (en fazla 6 kişi).', fatal:true});
@@ -318,7 +327,7 @@ wss.on('connection', ws => {
       }
       p.ws=ws; p.connected=true; ws.room=room; ws.player=p;
       send(ws, {t:'joined', code:room.code, token:p.token});
-      room.broadcast();
+      if(room.phase==='bid'||room.phase==='play') room.advance(); else room.broadcast();
       return;
     }
     if(ws.room && ws.player) ws.room.act(ws.player, m);

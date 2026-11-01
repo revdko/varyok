@@ -26,6 +26,8 @@ body{background:radial-gradient(ellipse at 50% 35%, var(--felt) 0%, var(--felt-d
 header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
 h1{font-family:var(--display);font-weight:400;font-size:clamp(28px,6vw,40px);margin:0;letter-spacing:.01em;color:var(--ivory)}
 h1 span{color:var(--brass)}
+.menu-link{color:var(--brass);font-weight:600;text-decoration:none;font-size:14px}
+.menu-link:hover{text-decoration:underline}
 .sub{color:var(--muted);font-size:13px}
 button{touch-action:manipulation;font-family:var(--body);font-size:14px;font-weight:600;border-radius:8px;border:1px solid var(--felt-line);background:#ffffff10;color:var(--text);padding:9px 14px;cursor:pointer}
 button:hover:not(:disabled){background:#ffffff1c}
@@ -512,7 +514,7 @@ function bidChip(p){
 
 function renderSetup(){
   $app.innerHTML = `
-  <header><h1>Var <span>Yok</span></h1><div class="sub">104 kartlık iki deste · 3–6 oyuncu</div></header>
+  <header><h1>Var <span>Yok</span></h1><a href="/" class="menu-link">← Ana menü</a></header>
   <section class="setup">
     <h2>Nasıl oynanır</h2>
     <ul class="rules">
@@ -590,6 +592,7 @@ function render(){
   <header><h1>Var <span>Yok</span></h1>
     <div class="sub">${G.handNo}. el · El değeri: <b class="stake">${G.stake}</b>${G.stake>BASE_STAKE?` (katlamalı ×${G.stake/BASE_STAKE})`:''} · Puanın: <b>${me.score}</b> ${G.dealer===0?'· Dağıtan sensin':''}
       · <button data-act="fast" id="t-fast" style="padding:3px 9px;font-size:12px" aria-pressed="${G.fast}">${G.fast?'Hızlı: açık':'Hızlı: kapalı'}</button></div>
+    <a href="/" class="menu-link">← Ana menü</a>
   </header>
   <section class="opps">${opps}</section>
   <section class="center">

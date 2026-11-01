@@ -53,6 +53,18 @@ details summary{cursor:pointer;color:var(--brass);font-weight:600}
 .pitem .nm{font-weight:800}
 .pitem button{padding:4px 10px;font-size:12px}
 .notice{color:var(--bad);font-weight:600}
+button.small{padding:5px 10px;font-size:12px}
+header .row{gap:10px}
+.menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.tile{display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:14px;border:1px solid var(--felt-line);background:#00000026;color:var(--text);text-decoration:none}
+.tile .tile-k{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--brass)}
+.tile .tile-t{font-family:var(--display);font-size:24px;color:var(--ivory);line-height:1.15}
+.tile > div > input{width:100%}
+.tile .tile-d{color:var(--muted);line-height:1.5}
+.tile.solo{background:linear-gradient(150deg,#d9a44126,#00000026);border-color:var(--brass);justify-content:center;min-height:180px;transition:transform .15s}
+.tile.solo:hover{transform:translateY(-2px)}
+.tile.solo:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.tile.solo::after{content:"Oyna →";align-self:flex-start;background:var(--brass);color:var(--ink);font-weight:800;padding:9px 16px;border-radius:8px;margin-top:4px}
 
 /* opponents */
 .opps{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
@@ -154,7 +166,7 @@ let selected = null, fresh = null, gaps = new Set(), msg = '', msgTimer = null, 
 let lastTap = {}, pd = null, suppressClick = false;
 
 const params = new URLSearchParams(location.search);
-const inviteCode = (params.get('oda') || '').toUpperCase();
+let inviteCode = (params.get('oda') || '').toUpperCase();
 
 // ---------- bağlantı ----------
 function connect(){
@@ -169,7 +181,7 @@ function connect(){
     else if(m.t==='state'){ onState(m.s); }
     else if(m.t==='drawn'){ fresh = m.id; }
     else if(m.t==='error'){
-      if(m.fatal){ wantRoom=null; S=null; store.set('code', null); homeMsg = m.msg; render(); }
+      if(m.fatal){ const t=m.msg; goHome(); homeMsg=t; render(); }
       else flash(m.msg);
     }
   };
@@ -253,23 +265,51 @@ const RULES = `<ul class="rules">
 
 function renderHome(){
   const name = store.get('name') || '';
+  const saved = store.get('code');
+  const wait = connected ? '' : 'disabled';
   $app.innerHTML = `
-  <header><h1>Var <span>Yok</span></h1><div class="sub">Arkadaşlarınla çevrimiçi kart oyunu · 3–6 kişi</div></header>
+  <header><h1>Var <span>Yok</span></h1><div class="sub">Kartlı okey usulü · 104 kart · 3–6 kişi</div></header>
   ${homeMsg?`<p class="notice">${esc(homeMsg)}</p>`:''}
-  <section class="panel">
+  ${inviteCode ? `
+  <section class="panel invite">
+    <div><h2>Masaya davet edildin</h2><p class="sub">Masa kodu: <b>${esc(inviteCode)}</b></p></div>
     <div><label for="nm">Adın</label><input id="nm" maxlength="16" placeholder="Masada görünecek adın" value="${esc(name)}" autocomplete="nickname"></div>
-    ${inviteCode ? `
-      <div><h2>Davet edildin</h2><p class="sub">Masa kodu: <b>${esc(inviteCode)}</b></p></div>
-      <div class="row"><button class="primary" data-act="join-invite" id="join-inv" ${connected?'':'disabled'}>Masaya katıl</button></div>
-    ` : `
-      <div class="row"><button class="primary" data-act="create" id="create" ${connected?'':'disabled'}>Yeni masa kur</button></div>
-      <div><label for="code">Ya da arkadaşının masa koduyla katıl</label>
-        <div class="row"><input id="code" maxlength="5" placeholder="Örn. K7MRA" style="text-transform:uppercase"><button data-act="join" id="join" ${connected?'':'disabled'}>Katıl</button></div></div>
-    `}
+    <div class="row"><button class="primary" data-act="join-invite" id="join-inv" ${wait}>Masaya katıl</button><button data-act="home" id="cancel-inv">Vazgeç</button></div>
     ${connected?'':'<p class="sub">Sunucuya bağlanılıyor… (ilk açılışta yarım dakika sürebilir)</p>'}
-  </section>
-  <details class="panel"><summary>Nasıl oynanır</summary>${RULES}</details>
-  <p class="sub">Tek başına, bilgisayara karşı oynamak istersen: <a href="/tek.html" style="color:var(--brass)">Tek kişilik oyun</a></p>`;
+  </section>` : `
+  <section class="menu">
+    <a class="tile solo" href="/tek.html" id="m-solo">
+      <span class="tile-k">Tek kişilik</span>
+      <span class="tile-t">Bilgisayara karşı oyna</span>
+      <span class="tile-d">Hemen başla. İnternet bağlantısı beklemez.</span>
+    </a>
+    <div class="tile online">
+      <span class="tile-k">Çevrimiçi</span>
+      <span class="tile-t">Arkadaşlarınla oyna</span>
+      <div><label for="nm">Adın</label><input id="nm" maxlength="16" placeholder="Masada görünecek adın" value="${esc(name)}" autocomplete="nickname"></div>
+      ${saved ? `<button class="primary" data-act="resume" id="resume" ${wait}>Masana geri dön (${esc(saved)})</button>` : ''}
+      <button class="${saved?'':'primary'}" data-act="create" id="create" ${wait}>Yeni masa kur</button>
+      <div><label for="code">Arkadaşının masa koduyla katıl</label>
+        <div class="row"><input id="code" maxlength="5" placeholder="Örn. K7MRA" style="text-transform:uppercase"><button data-act="join" id="join" ${wait}>Katıl</button></div></div>
+      ${connected?'':'<p class="sub">Sunucuya bağlanılıyor… (ilk açılışta yarım dakika sürebilir)</p>'}
+    </div>
+  </section>`}
+  <details class="panel"><summary>Nasıl oynanır</summary>${RULES}</details>`;
+}
+
+function leaveRoom(){
+  if(S && S.phase!=='lobby' && S.phase!=='gameOver' && !me().out){
+    if(!confirm('Masadan kalkarsan yerine bilgisayar oynayacak ve bu masaya geri dönemeyeceksin. Kalkmak istiyor musun?')) return;
+  }
+  send({t:'leave'});
+  goHome();
+}
+function goHome(){
+  wantRoom=null; S=null; order=[]; selected=null; msg=''; homeMsg='';
+  store.set('code', null); store.set('token', null);
+  history.replaceState(null,'',location.pathname);
+  inviteCode='';
+  render();
 }
 
 function renderLobby(){
@@ -278,7 +318,7 @@ function renderLobby(){
   const wa = 'https://wa.me/?text=' + encodeURIComponent(`Var Yok masasına gel! ${link}`);
   const n = S.players.length;
   $app.innerHTML = `
-  <header><h1>Var <span>Yok</span></h1><div class="sub">Bekleme salonu</div></header>
+  <header><h1>Var <span>Yok</span></h1><div class="row"><span class="sub">Bekleme salonu</span><button class="small" data-act="leave" id="leave">Masadan kalk</button></div></header>
   <section class="panel">
     <div><label>Masa kodu</label><div class="code">${S.code}</div></div>
     <div><label>Davet linki</label><div class="link" id="lnk">${esc(link)}</div></div>
@@ -355,7 +395,7 @@ function renderGame(){
 
   $app.innerHTML = `
   <header><h1>Var <span>Yok</span></h1>
-    <div class="sub">Masa ${S.code} · ${S.handNo}. el · El değeri: <b>${S.stake}</b>${S.stake>10?` (katlamalı ×${S.stake/10})`:''} · Puanın: <b>${m.score}</b></div>
+    <div class="row"><span class="sub">Masa ${S.code} · ${S.handNo}. el · El değeri: <b>${S.stake}</b>${S.stake>10?` (katlamalı ×${S.stake/10})`:''} · Puanın: <b>${m.score}</b></span><button class="small" data-act="leave" id="leave">Masadan kalk</button></div>
   </header>
   <section class="opps">${oppsHTML}</section>
   <section class="center">
@@ -429,6 +469,9 @@ $app.addEventListener('click', e=>{
     const link=inviteLink();
     navigator.clipboard.writeText(link).then(()=>{ el.textContent='Kopyalandı'; }).catch(()=>{ const r=document.createRange(); r.selectNodeContents(document.getElementById('lnk')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); el.textContent='Seçildi, kopyala'; });
   }
+  else if(a==='resume'){ if(!saveName()) return; wantRoom={t:'join', code:store.get('code')}; sendJoin(); }
+  else if(a==='home') goHome();
+  else if(a==='leave') leaveRoom();
   else if(a==='addbot') send({t:'addBot'});
   else if(a==='rmbot') send({t:'removeBot', id:el.dataset.id});
   else if(a==='start') send({t:'start'});
@@ -512,7 +555,8 @@ window.addEventListener('pointercancel', e=>endDrag(e,true));
 
 // Sayfa yenilenirse aynı masaya geri dön
 const savedCode = store.get('code');
-if(savedCode && store.get('token') && (!inviteCode || inviteCode===savedCode)) wantRoom={t:'join', code:savedCode};
+// Sayfa yenilenince (adres çubuğunda masa kodu varken) aynı masaya kendiliğinden dön
+if(savedCode && store.get('token') && inviteCode===savedCode) wantRoom={t:'join', code:savedCode};
 render();
 connect();
 </script>
